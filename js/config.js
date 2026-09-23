@@ -4,12 +4,10 @@
 // ============================================================================
 
 // URL du projet, par exemple 'https://abcdefghijklmnop.supabase.co'
-export const SUPABASE_URL = 'https://VOTRE-PROJET.supabase.co';
+export const SUPABASE_URL = 'https://mzkpaqqrylhzabyckimh.supabase.co';
 
-// Clé publique : "Publishable key" (sb_publishable_...) ou, sur un ancien projet, "anon public".
-// Elle peut être publique sur GitHub : c'est la sécurité RLS de la base qui protège les données.
-// Ne mets JAMAIS ici la "secret key" ni la "service_role key".
-export const SUPABASE_KEY = 'VOTRE_CLE_PUBLISHABLE';
+
+export const SUPABASE_KEY = 'sb_publishable_5KwhRFvxKJBZrmV4qWd_Fw_13IMo8-O';
 
 // Style de la carte (gratuit, sans clé). Autres choix : 'liberty' ou 'bright'.
 export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
