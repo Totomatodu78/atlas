@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.supabase.co https://tiles.openfreemap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://tiles.openfreemap.org https://nominatim.openstreetmap.org; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#0F1E33">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Atlas">
+  <title>Atlas</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="vendor/supabase.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+  <!-- Chargement -->
+  <div class="view view-loading" data-view="loading">
+    <div class="loader" role="progressbar" aria-label="Chargement"></div>
+  </div>
+
+  <!-- App pas encore configurée -->
+  <section class="view view-screen" data-view="config" hidden>
+    <div class="screen">
+      <h1 class="brand">Atlas</h1>
+      <p class="lede">L'app est en ligne, il reste à la relier à Supabase.</p>
+      <p class="screen-note">Ouvre <code>js/config.js</code> dans ton dépôt GitHub et remplace les deux valeurs par celles de ton projet Supabase.</p>
+    </div>
+  </section>
+
+  <!-- Connexion -->
+  <section class="view view-screen" data-view="auth" hidden>
+    <div class="screen">
+      <h1 class="brand">Atlas</h1>
+      <p class="lede">La carte de vos voyages, visible par vous deux seulement.</p>
+
+      <form id="form-email" class="stack" novalidate>
+        <label for="input-email">Adresse e-mail</label>
+        <input id="input-email" type="email" autocomplete="email" inputmode="email" required placeholder="prenom@exemple.fr">
+        <button class="btn btn-primary" type="submit">Recevoir un code</button>
+      </form>
+
+      <form id="form-code" class="stack" hidden novalidate>
+        <label for="input-code">Code reçu par e-mail</label>
+        <p class="screen-note">Envoyé à <strong id="code-email"></strong>. Regarde aussi dans les spams.</p>
+        <input id="input-code" class="input-code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required placeholder="123456">
+        <button class="btn btn-primary" type="submit">Se connecter</button>
+        <button class="btn btn-quiet" type="button" id="btn-code-back">Utiliser une autre adresse</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Première connexion : créer ou rejoindre -->
+  <section class="view view-screen" data-view="onboard" hidden>
+    <div class="screen">
+      <h1 class="brand">Atlas</h1>
+      <div class="segmented" role="tablist" aria-label="Créer ou rejoindre">
+        <button type="button" role="tab" class="segment" data-tab="create" aria-selected="true">Créer une carte</button>
+        <button type="button" role="tab" class="segment" data-tab="join" aria-selected="false">J'ai un code</button>
+      </div>
+
+      <form id="form-create" class="stack" data-panel="create" novalidate>
+        <label for="create-name">Nom de la carte</label>
+        <input id="create-name" maxlength="60" required placeholder="Nos voyages">
+        <label for="create-me">Ton prénom</label>
+        <input id="create-me" maxlength="30" required autocomplete="given-name">
+        <button class="btn btn-primary" type="submit">Créer la carte</button>
+        <p class="screen-note">Tu obtiendras ensuite un code à envoyer à l'autre personne.</p>
+      </form>
+
+      <form id="form-join" class="stack" data-panel="join" hidden novalidate>
+        <label for="join-code">Code d'invitation</label>
+        <input id="join-code" class="input-code" maxlength="12" required autocapitalize="characters" autocomplete="off" spellcheck="false">
+        <label for="join-me">Ton prénom</label>
+        <input id="join-me" maxlength="30" required autocomplete="given-name">
+        <button class="btn btn-primary" type="submit">Rejoindre la carte</button>
+      </form>
+
+      <button class="btn btn-quiet" type="button" data-action="logout">Se déconnecter</button>
+    </div>
+  </section>
+
+  <!-- L'app -->
+  <main class="view view-app" data-view="app" hidden>
+    <div id="map" aria-label="Globe interactif"></div>
+
+    <header class="topbar">
+      <button class="title-pill" id="btn-menu" type="button" aria-label="Ouvrir le menu de la carte">
+        <span class="title-pill-name" id="map-title"></span>
+        <span class="title-pill-stats" id="map-stats"></span>
+      </button>
+    </header>
+
+    <div class="pick-banner" id="pick-banner" hidden>
+      <span>Touche la carte à l'endroit du voyage</span>
+      <button class="btn btn-small" type="button" id="btn-pick-cancel">Annuler</button>
+    </div>
+
+    <p class="hint" id="hint" hidden>Appui long sur le globe pour épingler un lieu</p>
+
+    <nav class="dock" aria-label="Actions">
+      <button class="btn btn-glass" id="btn-list" type="button">Nos voyages</button>
+      <button class="btn btn-primary" id="btn-add" type="button">Ajouter un lieu</button>
+    </nav>
+  </main>
+
+  <!-- Feuille : liste -->
+  <div class="sheet" id="sheet-list" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="list-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <header class="sheet-head">
+        <h2 id="list-title">Nos voyages</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </header>
+      <div class="chips" id="chips" role="group" aria-label="Filtrer par personne"></div>
+      <ul class="place-list" id="place-list"></ul>
+      <p class="empty" id="list-empty" hidden>Aucun lieu pour l'instant. Ajoute votre premier voyage avec « Ajouter un lieu ».</p>
+    </section>
+  </div>
+
+  <!-- Feuille : détail d'un lieu -->
+  <div class="sheet" id="sheet-detail" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <section class="sheet-panel sheet-panel-detail" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <div class="gallery-wrap" id="detail-gallery-wrap">
+        <div class="gallery" id="detail-gallery"></div>
+        <span class="gallery-count" id="detail-count"></span>
+      </div>
+      <button class="icon-btn icon-btn-float" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="detail-body">
+        <h2 class="detail-title" id="detail-title"></h2>
+        <p class="detail-where" id="detail-where"></p>
+        <p class="detail-by" id="detail-by"></p>
+        <p class="detail-notes" id="detail-notes"></p>
+        <div class="row-actions">
+          <button class="btn btn-secondary" type="button" id="btn-edit">Modifier</button>
+          <button class="btn btn-danger" type="button" id="btn-delete">Supprimer</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Feuille : ajouter / modifier -->
+  <div class="sheet" id="sheet-edit" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <header class="sheet-head">
+        <h2 id="edit-title">Nouveau lieu</h2>
+        <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </header>
+
+      <div class="field">
+        <span class="field-label">Où ?</span>
+        <form class="search-row" id="form-search" role="search">
+          <input id="search-input" type="search" placeholder="Ville, monument, pays…" autocomplete="off" enterkeyhint="search" aria-label="Rechercher un lieu">
+          <button class="btn btn-secondary btn-small" type="submit">Chercher</button>
+        </form>
+        <ul class="search-results" id="search-results" hidden></ul>
+        <div class="where-card" id="where-card">
+          <svg class="where-pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <span id="where-text">Aucun endroit choisi</span>
+        </div>
+        <div class="where-actions">
+          <button class="btn btn-quiet btn-small" type="button" id="btn-pick-map">Choisir sur la carte</button>
+          <button class="btn btn-quiet btn-small" type="button" id="btn-locate">Ma position</button>
+        </div>
+      </div>
+
+      <form id="form-place" class="stack" novalidate>
+        <label for="place-name">Nom affiché</label>
+        <input id="place-name" maxlength="120" required placeholder="Lisbonne">
+        <label for="place-date">Date du voyage</label>
+        <input id="place-date" type="date">
+        <label for="place-notes">Souvenirs</label>
+        <textarea id="place-notes" rows="4" maxlength="2000" placeholder="Le meilleur pastel de nata de notre vie…"></textarea>
+
+        <span class="field-label">Photos</span>
+        <div class="photo-grid" id="photo-grid">
+          <label class="photo-add" id="photo-add">
+            <input type="file" id="photo-input" accept="image/*" multiple>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Ajouter</span>
+          </label>
+        </div>
+        <p class="form-note">Les photos sont réduites avant l'envoi et leurs données de localisation (EXIF) sont retirées.</p>
+
+        <p class="progress" id="save-progress" hidden></p>
+        <button class="btn btn-primary" type="submit" id="btn-save">Enregistrer le lieu</button>
+      </form>
+    </section>
+  </div>
+
+  <!-- Feuille : menu -->
+  <div class="sheet" id="sheet-menu" hidden>
+    <div class="sheet-backdrop" data-close></div>
+    <section class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <header class="sheet-head">
+        <h2 id="menu-title"></h2>
+        <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </header>
+      <ul class="member-list" id="member-list"></ul>
+      <div class="invite" id="invite" hidden>
+        <p>Envoie ce code à l'autre personne pour qu'elle rejoigne la carte :</p>
+        <p class="invite-code" id="invite-code"></p>
+        <button class="btn btn-primary" type="button" id="btn-share">Partager le lien d'invitation</button>
+      </div>
+      <button class="btn btn-secondary" type="button" data-action="logout">Se déconnecter</button>
+    </section>
+  </div>
+
+  <!-- Photo en plein écran -->
+  <div class="lightbox" id="lightbox" hidden>
+    <img id="lightbox-img" alt="">
+    <button class="icon-btn icon-btn-float" type="button" id="lightbox-close" aria-label="Fermer la photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
