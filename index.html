@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://*.supabase.co https://tiles.openfreemap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://tiles.openfreemap.org https://nominatim.openstreetmap.org; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#F3F5F8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0F1E33" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Atlas">
+  <title>Atlas</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="vendor/supabase.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body data-space="accueil">
+
+  <!-- Chargement -->
+  <div class="view view-loading" data-view="loading">
+    <div class="loader" role="progressbar" aria-label="Chargement"></div>
+  </div>
+
+  <!-- App pas encore configurée -->
+  <section class="view view-screen" data-view="config" hidden>
+    <div class="screen">
+      <h1 class="brand">Atlas</h1>
+      <p class="lede">L'app est en ligne, il reste à la relier à Supabase.</p>
+      <p class="screen-note">Ouvre <code>js/config.js</code> dans ton dépôt GitHub et remplace les deux valeurs par celles de ton projet Supabase.</p>
+    </div>
+  </section>
+
+  <!-- Connexion -->
+  <section class="view view-screen" data-view="auth" hidden>
+    <div class="screen">
+      <h1 class="brand">Atlas</h1>
+      <p class="lede">Nos idées, nos souvenirs, notre quotidien. Rien qu'à nous deux.</p>
+
+      <div class="segmented segmented-dark" role="tablist" aria-label="Connexion ou création de compte">
+        <button type="button" role="tab" class="segment" data-auth-tab="login" aria-selected="true">Se connecter</button>
+        <button type="button" role="tab" class="segment" data-auth-tab="signup" aria-selected="false">Créer mon compte</button>
+      </div>
+
+      <form id="form-login" class="stack" novalidate>
+        <label for="login-email">Adresse e-mail</label>
+        <input id="login-email" type="email" autocomplete="username" inputmode="email" required placeholder="prenom@exemple.fr">
+        <label for="login-password">Mot de passe</label>
+        <input id="login-password" type="password" autocomplete="current-password" required>
+        <button class="btn btn-primary" type="submit">Se connecter</button>
+      </form>
+
+      <form id="form-signup" class="stack" hidden novalidate>
+        <label for="signup-email">Adresse e-mail</label>
+        <input id="signup-email" type="email" autocomplete="username" inputmode="email" required placeholder="prenom@exemple.fr">
+        <label for="signup-password">Mot de passe</label>
+        <input id="signup-password" type="password" autocomplete="new-password" minlength="10" required>
+        <label for="signup-password2">Confirme le mot de passe</label>
+        <input id="signup-password2" type="password" autocomplete="new-password" required>
+        <p class="screen-note">10 caractères minimum. Ton téléphone peut t'en proposer un et s'en souvenir pour toi.</p>
+        <button class="btn btn-primary" type="submit">Créer mon compte</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Première connexion : créer ou rejoindre -->
+  <section class="view view-screen" data-view="onboard" hidden>
+    <div class="screen">
+      <h1 class="brand">Atlas</h1>
+      <div class="segmented segmented-dark" role="tablist" aria-label="Créer ou rejoindre">
+        <button type="button" role="tab" class="segment" data-tab="create" aria-selected="true">Créer notre espace</button>
+        <button type="button" role="tab" class="segment" data-tab="join" aria-selected="false">J'ai un code</button>
+      </div>
+
+      <form id="form-create" class="stack" data-panel="create" novalidate>
+        <label for="create-name">Nom de votre espace</label>
+        <input id="create-name" maxlength="60" required placeholder="Thomas & Léa">
+        <label for="create-me">Ton prénom</label>
+        <input id="create-me" maxlength="30" required autocomplete="given-name">
+        <button class="btn btn-primary" type="submit">Créer l'espace</button>
+        <p class="screen-note">Tu obtiendras ensuite un code à envoyer à l'autre personne.</p>
+      </form>
+
+      <form id="form-join" class="stack" data-panel="join" hidden novalidate>
+        <label for="join-code">Code d'invitation</label>
+        <input id="join-code" class="input-code" maxlength="12" required autocapitalize="characters" autocomplete="off" spellcheck="false">
+        <label for="join-me">Ton prénom</label>
+        <input id="join-me" maxlength="30" required autocomplete="given-name">
+        <button class="btn btn-primary" type="submit">Rejoindre l'espace</button>
+      </form>
+
+      <button class="btn btn-quiet btn-on-dark-text" type="button" data-action="logout">Se déconnecter</button>
+    </div>
+  </section>
+
+  <!-- L'application -->
+  <div class="view view-app" data-view="app" hidden>
+    <main id="view" class="page"></main>
+    <nav class="tabbar" aria-label="Navigation principale">
+      <button class="tab" type="button" data-tab="accueil" data-route="accueil">
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg></span>Accueil
+      </button>
+      <button class="tab" type="button" data-tab="decouvrir" data-route="decouvrir/activite">
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></span>Découvrir
+      </button>
+      <button class="tab tab-add" type="button" id="tab-add" aria-label="Ajouter">
+        <span class="tab-add-btn"><span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span></span>
+      </button>
+      <button class="tab" type="button" data-tab="souvenirs" data-route="souvenirs/album">
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-8 8"/></svg></span>Souvenirs
+      </button>
+      <button class="tab" type="button" data-tab="couple" data-route="couple/agenda">
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg></span>Couple
+      </button>
+    </nav>
+  </div>
+
+  <div id="sheets"></div>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <img id="lightbox-img" alt="">
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
